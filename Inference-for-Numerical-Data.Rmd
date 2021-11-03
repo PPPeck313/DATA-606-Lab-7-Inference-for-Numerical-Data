@@ -1,0 +1,392 @@
+---
+title: "DATA 606 - Lab 7 - Inference for Numerical Data"
+author: "Preston Peck"
+date: "11/1/2021"
+output: html_document
+---
+
+# Inference for Numerical Data
+<https://htmlpreview.github.io/?https://github.com/jbryer/DATA606/blob/master/inst/labs/Lab7/Lab7_inf_for_numerical_data.html>
+
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(openintro)
+library(infer)
+library(psych)
+library(Rmisc)
+library(DescTools)
+```
+
+```{r}
+set.seed(37)
+
+data('yrbss', package='openintro')
+yrbss
+```
+
+### Exercise 1
+There are 13583 cases (rows)
+```{r}
+yrbss %>%
+  glimpse
+
+yrbss %>%
+  nrow
+```
+
+### Exercise 2
+There are valid 12579 entries and 1004 NA's
+```{r}
+yrbss$weight %>%
+  describe
+
+yrbss$weight %>%
+  summary
+```
+
+### Exercise 3
+Those working out more than 2 days a week weight more, and that might be accredited to increased muscle mass
+```{r}
+yesLabel <- "yes"
+noLabel <- "no"
+
+
+
+yrbss <- yrbss %>% 
+  mutate(physical_3plus = ifelse(yrbss$physically_active_7d > 2, yesLabel, noLabel))
+
+boxplot(yrbss$weight ~ yrbss$physical_3plus, ylab = "Weight", xlab = "Physical 3+ Days")
+
+
+no_physical_3plus <- (yrbss %>%
+  filter(physical_3plus == noLabel))
+
+no_physical_3plus$weight %>%
+  summary
+
+no_physical_3plus$weight %>%
+  describe
+
+
+yes_physical_3plus <- (yrbss %>%
+  filter(physical_3plus == yesLabel))
+
+yes_physical_3plus$weight %>%
+  summary
+
+yes_physical_3plus$weight %>%
+  describe
+
+
+yrbss %>%
+  group_by(physical_3plus) %>%
+  dplyr::summarise(mean_weight = mean(weight, na.rm = TRUE))
+```
+
+### Exercise 4
+There are 3 conditions for interference: Random, Normal, Independence \\
+The sample is random ✓ \
+The sample skew is normal ? \
+-> If the skew is not normal (right skew) or it has an unknown parent population, the sample size must be large (n ≥ 30) ✓ \
+The sample is independent (n ≤ 10% of population — 13583 / 4.9 million high school students from 1991-2019) ✓
+
+```{r}
+yrbss %>%
+  group_by(physical_3plus) %>%
+  filter(!is.na(weight)) %>%
+  dplyr::count(physical_3plus)
+
+
+ggplot(data = yrbss, aes(x = weight)) +
+    geom_histogram()
+
+ggplot(data = no_physical_3plus, aes(x = weight)) +
+    geom_histogram()
+
+ggplot(data = yes_physical_3plus, aes(x = weight)) +
+    geom_histogram()
+```
+
+### Exercise 5
+H0: There is no correlation between weight and number of days worked out in a week \
+HA: There is a correlation between weight and number of days worked out in a week
+
+### Exercise 6
+No values are greater than obs_stat \
+Since the p-value is less than 0.05, we can reject the null hypothesis
+```{r}
+obs_diff <- yrbss %>%
+  specify(weight ~ physical_3plus) %>%
+  calculate(stat = "diff in means", order = c("yes", "no"))
+
+obs_diff
+
+null_dist <- yrbss %>%
+  specify(weight ~ physical_3plus) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in means", order = c("yes", "no"))
+
+null_dist
+
+ggplot(data = null_dist, aes(x = stat)) +
+  geom_histogram()
+
+null_dist %>%
+  get_p_value(obs_stat = obs_diff, direction = "two_sided")
+```
+
+### Exercise 7
+We're 95% sure the difference of averages of all weights of those who don't work 3 days and greater and those that do falls somewhere between -2.424441 and -1.124728
+```{r}
+DATA606::inference(y = yrbss$weight, 
+                   x = yrbss$physical_3plus, 
+                   null = 0,
+                   est = "mean",
+                   type = "ht",
+                   alternative = "twosided", 
+                   method = "theoretical")
+
+oilabs::inference(y = weight, 
+                  x = physical_3plus,
+                  data = yrbss,
+                  null = 0,
+                  statistic = "mean",
+                  type = "ht",
+                  alternative = "twosided", 
+                  method = "theoretical")
+
+t.test(data = yrbss, weight ~ physical_3plus)
+
+yes_physical_3plus$weight %>%
+  t.test
+
+no_physical_3plus$weight %>%
+  t.test
+```
+
+### Exercise 8
+We're 95% sure the average of all heights of those who work 3 days and greater and those that don't falls somewhere between 1.689411 and 1.693071
+```{r}
+yrbss$height %>%
+  summary
+
+yrbss_heights <- yrbss %>%
+  filter(!is.na(height))
+
+
+
+physical_3plus_grouped <- yrbss_heights %>%
+  group_by(physical_3plus)
+  
+physical_3plus_grouped
+
+
+physical_3plus_grouped_means <- physical_3plus_grouped %>%
+  dplyr::summarise(mean(height))
+  
+physical_3plus_grouped_means
+
+yrbss_mean <- mean(yrbss_heights$height)
+
+yrbss_mean
+
+
+physical_3plus_grouped_counts <- physical_3plus_grouped %>%
+  dplyr::count(physical_3plus)
+
+physical_3plus_grouped_counts
+
+yrbss_count <- nrow(yrbss_heights)
+
+yrbss_count
+
+
+physical_3plus_grouped_sds <- physical_3plus_grouped %>%
+  dplyr::summarise(sd(height))
+
+physical_3plus_grouped_sds
+
+yrbss_sd <- sd(yrbss_heights$height)
+
+yrbss_sd
+
+
+z = 1.96
+
+
+upperCI <- yrbss_mean + z * (yrbss_sd / sqrt(yrbss_count))
+
+upperCI
+
+lowerCI <- yrbss_mean - z * (yrbss_sd / sqrt(yrbss_count))
+
+lowerCI
+
+
+
+yrbss_heights$height %>%
+  summary
+
+
+yrbss_heights$height %>%
+  t.test
+
+ciBounds <- yrbss_heights$height %>%
+  CI
+
+ciBounds
+
+meanCIBounds <- yrbss_heights$height %>%
+  MeanCI
+
+meanCIBounds
+
+
+
+c(upperCI, ciBounds[[1]], meanCIBounds[[3]])
+
+c(lowerCI, ciBounds[[3]], meanCIBounds[[2]])
+
+paste("Interval:", ciBounds[[1]] - ciBounds[[3]])
+
+
+
+DATA606::inference(y = yrbss_heights$height, 
+                   type = "ci", 
+                   est = "mean",
+                   alternative = "twosided", 
+                   method = "theoretical")
+
+oilabs::inference(y = height, 
+                 data = yrbss_heights,
+                 null = 0,
+                 statistic = "mean",
+                 type = "ci",
+                 alternative = "twosided", 
+                 method = "theoretical")
+```
+
+### Exercise 9
+The range is smaller at 90% confidence because we're less confident, which means by reducing the range, the true average is less likely to fall within it
+```{r}
+z <- 1.645
+
+
+
+yrbss_heights$height %>%
+  t.test(conf.level = 0.90)
+
+ciBounds <- yrbss_heights$height %>%
+  CI(ci = 0.90)
+
+ciBounds
+
+
+meanCIBounds <- yrbss_heights$height %>%
+  MeanCI(conf.level = 0.90)
+
+meanCIBounds
+
+
+
+paste("Upper bound:", ciBounds[[1]])
+
+paste("Lower bound:", ciBounds[[3]])
+
+paste("Interval:", ciBounds[[1]] - ciBounds[[3]])
+
+
+
+DATA606::inference(y = yrbss_heights$height, 
+                   type = "ci", 
+                   est = "mean", 
+                   alternative = "twosided", 
+                   method = "theoretical", 
+                   conflevel = 0.90)
+
+oilabs::inference(y = height, 
+                  data = yrbss_heights,
+                  null = 0,
+                  statistic = "mean",
+                  type = "ci",
+                  alternative = "twosided", 
+                  method = "theoretical")
+```
+
+### Exercise 10
+H0: There is no correlation between height and number of days worked out in a week \
+HA: There is a correlation between height and number of days worked out in a week \
+Since the p-value is less than 0.05, we can reject the null hypothesis
+```{r}
+yes_physical_3plus_yrbss_heights <- (yrbss_heights %>%
+  filter(physical_3plus == yesLabel))
+
+yes_physical_3plus_yrbss_heights$height %>%
+  summary
+
+yes_physical_3plus_yrbss_heights$height %>%
+  MeanCI
+
+
+
+no_physical_3plus_yrbss_heights <- (yrbss_heights %>%
+  filter(physical_3plus == noLabel))
+
+no_physical_3plus_yrbss_heights$height %>%
+  summary
+
+no_physical_3plus_yrbss_heights$height %>%
+  MeanCI
+
+
+
+DATA606::inference(y = yrbss_heights$height, 
+                   x = yrbss_heights$physical_3plus, 
+                   null = 0,
+                   est = "mean",
+                   order = c(yesLabel, noLabel),
+                   type = "ht",
+                   alternative = "twosided", 
+                   method = "theoretical")
+
+oilabs::inference(y = height, 
+                  x = physical_3plus, 
+                  data = yrbss_heights,
+                  null = 0,
+                  statistic = "mean",
+                  order = c(yesLabel, noLabel),
+                  type = "ht",
+                  alternative = "twosided", 
+                  method = "theoretical")
+```
+
+### Exercise 11
+There are 8 options for hours_tv_per_school_day (one of which is NA)
+```{r}
+yrbss %>%
+  group_by(hours_tv_per_school_day) %>%
+  dplyr::summarise(n())
+```
+
+### Exercise 12
+H0: There is no correlation between weight and hours of sleep on a school night \
+HA: There is a correlation between weight and hours of sleep on a school night \
+Since the p-value is less than 0.05, we can reject the null hypothesis
+```{r}
+yrbss_weight_school_night_hours_sleep <- yrbss %>%
+  filter(!is.na(weight)) %>%
+  filter(!is.na(school_night_hours_sleep))
+
+
+
+oilabs::inference(y = weight, 
+                  x = school_night_hours_sleep, 
+                  data = yrbss_weight_school_night_hours_sleep,
+                  null = 0,
+                  statistic = "mean",
+                  order = c(yesLabel, noLabel),
+                  type = "ht",
+                  alternative = "greater", 
+                  method = "theoretical")
+```
