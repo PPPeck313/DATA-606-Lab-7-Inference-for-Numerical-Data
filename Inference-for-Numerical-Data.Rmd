@@ -2,7 +2,9 @@
 title: "DATA 606 - Lab 7 - Inference for Numerical Data"
 author: "Preston Peck"
 date: "11/1/2021"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 # Inference for Numerical Data
@@ -84,11 +86,11 @@ yrbss %>%
 ```
 
 ### Exercise 4
-There are 3 conditions for interference: Random, Normal, Independence \\
-The sample is random ✓ \
+There are 3 conditions for interference: Random, Normal, Independence \
+The sample is random OK \
 The sample skew is normal ? \
--> If the skew is not normal (right skew) or it has an unknown parent population, the sample size must be large (n ≥ 30) ✓ \
-The sample is independent (n ≤ 10% of population — 13583 / 4.9 million high school students from 1991-2019) ✓
+-> If the skew is not normal (right skew) or it has an unknown parent population, the sample size must be large (n >= 30) OK \
+The sample is independent (n <= 10% of population — 13583 / 4.9 million high school students from 1991-2019) OK
 
 ```{r}
 yrbss %>%
